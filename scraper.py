@@ -24,33 +24,21 @@ def scrape_business_info(control_number):
             # Check timeout
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout_seconds:
-                print(f"❌ Captcha handling exceeded {timeout_seconds} seconds - exiting")
+                print(f"Captcha handling exceeded {timeout_seconds} seconds - exiting")
                 sys.exit(1)
                 
             try:
                 # Scroll to bring captcha into view
                 sb.cdp.scroll_into_view('div[id*="recaptcha"]')
-                sb.cdp.sleep(1)
                 
                 # Get captcha coordinates and click
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
                 x = rect['x'] + 35
                 y = rect['y'] + 20
                 
-                # Ensure coordinates are within screen bounds
-                screen_rect = sb.cdp.get_screen_rect()
-                window_rect = sb.cdp.get_window_rect()
-                max_x = min(screen_rect['width'], window_rect['width']) - 10
-                max_y = min(screen_rect['height'], window_rect['height']) - 10
-                
-                if x > max_x: x = max_x
-                if y > max_y: y = max_y
-                if x < 10: x = 10
-                if y < 10: y = 10
-                
-                # Click captcha
+                # Click captcha directly at calculated coordinates
                 sb.cdp.gui_click_x_y(x, y)
-                sb.cdp.sleep(2)
+                sb.cdp.sleep(1)
                 
             except Exception as e:
                 print(f"Captcha attempt failed: {e}")
@@ -61,14 +49,13 @@ def scrape_business_info(control_number):
         sb.cdp.click(search_button)
         
         # Wait for search results and click Details button
-        sb.cdp.sleep(3)
         details_button = 'button[title="Details"]'
         sb.cdp.click(details_button)
         
         # Wait for business details page to load
         business_details_selector = 'div[id="business-details"]'
         while not sb.cdp.is_element_present(business_details_selector):
-            sb.cdp.sleep(1)
+            sb.cdp.sleep(0.1)
         
         # Extract the business details div
         html = sb.cdp.get_page_source()
@@ -127,12 +114,12 @@ def scrape_business_info(control_number):
             with open(output_filename, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             
-            print(f"✅ Successfully extracted data and saved to {output_filename}")
+            print(f"Successfully extracted data and saved to {output_filename}")
                 
         else:
-            print("❌ Could not find business details div")
+            print("Could not find business details div")
         
-        print(f"✅ Successfully processed control number {control_number}")
+        print(f"Successfully processed control number {control_number}")
 
 
 if __name__ == "__main__":
