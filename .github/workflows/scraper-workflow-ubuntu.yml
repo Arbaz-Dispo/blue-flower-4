@@ -36,7 +36,7 @@ jobs:
           xfonts-cyrillic \
           libnss3-dev \
           libxss1 \
-          libasound2 \
+          libasound2t64 \
           libxtst6 \
           libgtk-3-0 \
           libdrm2 \
@@ -49,8 +49,8 @@ jobs:
     
     - name: Install Chrome
       run: |
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
     
