@@ -1,11 +1,18 @@
 import json
 import sys
 import os
+import time
+from datetime import datetime
 from seleniumbase import SB
 from bs4 import BeautifulSoup
 
 
 def scrape_business_info(control_number):
+    # Create logs folder if it doesn't exist
+    logs_folder = "logs"
+    if not os.path.exists(logs_folder):
+        os.makedirs(logs_folder)
+    
     with SB(uc=True, test=True, locale="en") as sb:
         url = "https://tncab.tnsos.gov/business-entity-search"
         sb.activate_cdp_mode(url)
@@ -17,7 +24,28 @@ def scrape_business_info(control_number):
         search_button = 'button[data-val-tooltip="Search"]'
         
         # Wait for the input field to be present and handle any captcha/Cloudflare
+        loop_count = 0
+        start_time = time.time()
+        timeout_seconds = 30
+        
         while not sb.cdp.is_element_visible(search_button):
+            # Check timeout
+            elapsed_time = time.time() - start_time
+            if elapsed_time > timeout_seconds:
+                print(f"⏰ TIMEOUT: Captcha handling exceeded {timeout_seconds} seconds")
+                print(f"📸 Total screenshots captured: {loop_count}")
+                print(f"🔍 Check logs folder for debugging screenshots")
+                print("❌ Exiting due to timeout - examine logs for debugging")
+                sys.exit(1)
+            
+            loop_count += 1
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            screenshot_name = f"{logs_folder}/captcha_loop_{loop_count}_{timestamp}.png"
+            
+            # Take screenshot before attempting captcha
+            sb.cdp.save_screenshot(screenshot_name)
+            print(f"📸 Screenshot saved: {screenshot_name} (elapsed: {elapsed_time:.1f}s)")
+            
             try:
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
                 x = rect['x'] + 30
@@ -26,8 +54,17 @@ def scrape_business_info(control_number):
                 sb.cdp.gui_click_x_y(x, y)
                 sb.cdp.sleep(2)
 
-            except Exception:
+            except Exception as e:
+                print(f"⚠️ Captcha handling attempt {loop_count} failed: {e}")
                 pass
+
+        # Take final screenshot when search button is visible
+        if loop_count > 0:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            final_screenshot = f"{logs_folder}/search_ready_{timestamp}.png"
+            sb.cdp.save_screenshot(final_screenshot)
+            print(f"📸 Final screenshot saved: {final_screenshot}")
+            print(f"✅ Captcha handling completed after {loop_count} attempts")
 
         sb.cdp.sleep(2)
         
@@ -112,7 +149,7 @@ def scrape_business_info(control_number):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python tennessee_scraper.py <control_number>")
+        print("Usage: python scraper.py <control_number>")
         sys.exit(1)
     control_number_arg = sys.argv[1]
     scrape_business_info(control_number_arg)
