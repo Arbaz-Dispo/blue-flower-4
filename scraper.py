@@ -6,7 +6,7 @@ from seleniumbase import SB
 from bs4 import BeautifulSoup
 
 def scrape_business_info(control_number):
-    with SB(uc=True, test=True, locale="en", maximize=True) as sb:
+    with SB(uc=True, test=True, locale="en", maximize=True, xvfb=True) as sb:
         url = "https://tncab.tnsos.gov/business-entity-search"
         sb.activate_cdp_mode(url)
 
