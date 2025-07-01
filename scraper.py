@@ -7,17 +7,167 @@ from seleniumbase import SB
 from bs4 import BeautifulSoup
 
 
+
 def scrape_business_info(control_number):
     # Create logs folder if it doesn't exist
     logs_folder = "logs"
     if not os.path.exists(logs_folder):
         os.makedirs(logs_folder)
     
-    with SB(uc=True, test=True, locale="en") as sb:
+    with SB(uc=True, test=True, locale="en", maximize=True) as sb:
         url = "https://tncab.tnsos.gov/business-entity-search"
         sb.activate_cdp_mode(url)
 
         sb.cdp.sleep(10)
+
+        # Inject custom cursor and click visualization CSS/JS
+        try:
+            sb.execute_script("""
+                // Remove any existing custom cursor
+                const existingCursor = document.querySelector('.custom-cursor');
+                if (existingCursor) existingCursor.remove();
+                
+                // Remove existing click markers
+                document.querySelectorAll('.click-marker').forEach(marker => marker.remove());
+                
+                // Custom cursor CSS
+                const style = document.createElement('style');
+                style.textContent = `
+                    .custom-cursor {
+                        position: fixed;
+                        width: 30px;
+                        height: 30px;
+                        border: 3px solid red;
+                        border-radius: 50%;
+                        pointer-events: none;
+                        z-index: 10000;
+                        background: rgba(255, 0, 0, 0.2);
+                        transition: all 0.1s ease;
+                    }
+                    
+                    .custom-cursor::before {
+                        content: '';
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        width: 2px;
+                        height: 20px;
+                        background: red;
+                        transform: translate(-50%, -50%);
+                    }
+                    
+                    .custom-cursor::after {
+                        content: '';
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        width: 20px;
+                        height: 2px;
+                        background: red;
+                        transform: translate(-50%, -50%);
+                    }
+                    
+                    .click-ripple {
+                        position: fixed;
+                        border: 2px solid lime;
+                        border-radius: 50%;
+                        pointer-events: none;
+                        z-index: 9999;
+                        animation: ripple 3s ease-out;
+                    }
+                    
+                    .click-marker {
+                        position: fixed;
+                        width: 40px;
+                        height: 40px;
+                        border: 2px solid orange;
+                        border-radius: 50%;
+                        background: rgba(255, 165, 0, 0.3);
+                        pointer-events: none;
+                        z-index: 9998;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 14px;
+                        color: black;
+                    }
+                    
+                    @keyframes ripple {
+                        0% {
+                            width: 0;
+                            height: 0;
+                            opacity: 1;
+                        }
+                        100% {
+                            width: 100px;
+                            height: 100px;
+                            opacity: 0;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                // Create custom cursor
+                const cursor = document.createElement('div');
+                cursor.className = 'custom-cursor';
+                document.body.appendChild(cursor);
+                
+                // Track mouse movement
+                let clickCounter = 0;
+                document.addEventListener('mousemove', function(e) {
+                    cursor.style.left = (e.clientX - 15) + 'px';
+                    cursor.style.top = (e.clientY - 15) + 'px';
+                });
+                
+                // Track all clicks
+                document.addEventListener('click', function(e) {
+                    clickCounter++;
+                    
+                    // Create ripple effect
+                    const ripple = document.createElement('div');
+                    ripple.className = 'click-ripple';
+                    ripple.style.left = (e.clientX - 50) + 'px';
+                    ripple.style.top = (e.clientY - 50) + 'px';
+                    document.body.appendChild(ripple);
+                    
+                    // Create permanent click marker
+                    const marker = document.createElement('div');
+                    marker.className = 'click-marker';
+                    marker.style.left = (e.clientX - 20) + 'px';
+                    marker.style.top = (e.clientY - 20) + 'px';
+                    marker.textContent = clickCounter;
+                    marker.id = 'click-marker-' + clickCounter;
+                    document.body.appendChild(marker);
+                    
+                    // Scale cursor on click
+                    cursor.style.transform = 'scale(1.5)';
+                    setTimeout(() => {
+                        cursor.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    // Remove ripple after animation
+                    setTimeout(() => {
+                        if (ripple.parentNode) ripple.remove();
+                    }, 3000);
+                    
+                    console.log('CLICK TRACKED:', {
+                        clickNumber: clickCounter,
+                        x: e.clientX,
+                        y: e.clientY,
+                        target: e.target.tagName
+                    });
+                });
+                
+                // Make cursor visible initially
+                cursor.style.left = '100px';
+                cursor.style.top = '100px';
+                
+                console.log('Custom cursor and click tracking initialized');
+            """)
+            print("[CURSOR] Custom cursor with click tracking enabled")
+        except Exception as e:
+            print(f"[WARNING] Could not initialize custom cursor: {e}")
 
         # Open site and bypass Cloudflare/captcha
         input_selector = 'input[data-val-property-name="Filenumber"]'
@@ -40,23 +190,44 @@ def scrape_business_info(control_number):
             
             loop_count += 1
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            screenshot_name = f"{logs_folder}/captcha_loop_{loop_count}_{timestamp}.png"
+            screenshot_before = f"{logs_folder}/captcha_loop_{loop_count}_{timestamp}_before.png"
+            screenshot_after = f"{logs_folder}/captcha_loop_{loop_count}_{timestamp}_after.png"
             
             # Take screenshot before attempting captcha
-            sb.cdp.save_screenshot(screenshot_name)
-            print(f"[SCREENSHOT] Screenshot saved: {screenshot_name} (elapsed: {elapsed_time:.1f}s)")
+            sb.cdp.save_screenshot(screenshot_before)
+            print(f"[SCREENSHOT] Before screenshot saved: {screenshot_before} (elapsed: {elapsed_time:.1f}s)")
             
             try:
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
                 x = rect['x'] + 30
                 y = rect['y'] + 25
 
-                sb.cdp.gui_click_x_y(x, y)
+                print(f"[CLICK] Moving cursor to coordinates: x={x}, y={y}")
+                
+                # First, move cursor to the target location (this will trigger visual cursor movement)
+                sb.cdp.gui_hover_x_y(x, y)
+                print(f"[CURSOR] Moved to captcha div, waiting 2 seconds...")
+                
+                # Wait 2 seconds to allow visual cursor to be visible and stable
                 sb.cdp.sleep(2)
+                
+                print(f"[CLICK] Now clicking at coordinates: x={x}, y={y}")
+                # Perform the click (cursor system will automatically handle visual feedback)
+                sb.cdp.gui_click_x_y(x, y)
+                sb.cdp.sleep(2)  # Allow time for click effects to show
+                
+                # Take screenshot with cursor and click markers visible
+                sb.cdp.save_screenshot(screenshot_after)
+                print(f"[SCREENSHOT] After screenshot saved with cursor and click markers: {screenshot_after}")
 
             except Exception as e:
                 print(f"[WARNING] Captcha handling attempt {loop_count} failed: {e}")
-                pass
+                # Still try to take an after screenshot even if click failed
+                try:
+                    sb.cdp.save_screenshot(screenshot_after)
+                    print(f"[SCREENSHOT] After screenshot saved (click failed): {screenshot_after}")
+                except:
+                    pass
 
         # Take final screenshot when search button is visible
         if loop_count > 0:
