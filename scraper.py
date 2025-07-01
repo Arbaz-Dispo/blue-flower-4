@@ -32,10 +32,10 @@ def scrape_business_info(control_number):
             # Check timeout
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout_seconds:
-                print(f"⏰ TIMEOUT: Captcha handling exceeded {timeout_seconds} seconds")
-                print(f"📸 Total screenshots captured: {loop_count}")
-                print(f"🔍 Check logs folder for debugging screenshots")
-                print("❌ Exiting due to timeout - examine logs for debugging")
+                print(f"[TIMEOUT] Captcha handling exceeded {timeout_seconds} seconds")
+                print(f"[INFO] Total screenshots captured: {loop_count}")
+                print(f"[DEBUG] Check logs folder for debugging screenshots")
+                print("[ERROR] Exiting due to timeout - examine logs for debugging")
                 sys.exit(1)
             
             loop_count += 1
@@ -44,7 +44,7 @@ def scrape_business_info(control_number):
             
             # Take screenshot before attempting captcha
             sb.cdp.save_screenshot(screenshot_name)
-            print(f"📸 Screenshot saved: {screenshot_name} (elapsed: {elapsed_time:.1f}s)")
+            print(f"[SCREENSHOT] Screenshot saved: {screenshot_name} (elapsed: {elapsed_time:.1f}s)")
             
             try:
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
@@ -55,7 +55,7 @@ def scrape_business_info(control_number):
                 sb.cdp.sleep(2)
 
             except Exception as e:
-                print(f"⚠️ Captcha handling attempt {loop_count} failed: {e}")
+                print(f"[WARNING] Captcha handling attempt {loop_count} failed: {e}")
                 pass
 
         # Take final screenshot when search button is visible
@@ -63,8 +63,8 @@ def scrape_business_info(control_number):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             final_screenshot = f"{logs_folder}/search_ready_{timestamp}.png"
             sb.cdp.save_screenshot(final_screenshot)
-            print(f"📸 Final screenshot saved: {final_screenshot}")
-            print(f"✅ Captcha handling completed after {loop_count} attempts")
+            print(f"[SCREENSHOT] Final screenshot saved: {final_screenshot}")
+            print(f"[SUCCESS] Captcha handling completed after {loop_count} attempts")
 
         sb.cdp.sleep(2)
         
@@ -142,9 +142,9 @@ def scrape_business_info(control_number):
             print(f"Extracted data saved to {output_filename}")
                 
         else:
-            print("❌ Could not find business details div")
+            print("[ERROR] Could not find business details div")
         
-        print(f"\n✅ Successfully processed control number {control_number}")
+        print(f"\n[SUCCESS] Successfully processed control number {control_number}")
 
 
 if __name__ == "__main__":
