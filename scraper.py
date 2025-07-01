@@ -211,8 +211,8 @@ def scrape_business_info(control_number):
                 # Physical coordinate-based clicking with mouse pointer
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
                 
-                x = rect['x'] + 20
-                y = rect['y'] + 35
+                x = rect['x'] + 35
+                y = rect['y'] + 20
                 
                 # Check if coordinates are within screen bounds
                 max_x = min(screen_rect['width'], window_rect['width']) - 10
