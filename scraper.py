@@ -198,15 +198,37 @@ def scrape_business_info(control_number):
             print(f"[SCREENSHOT] Before screenshot saved: {screenshot_before} (elapsed: {elapsed_time:.1f}s)")
             
             try:
+                # First, scroll to bring captcha into view
+                print("[SCROLL] Scrolling to bring captcha into view...")
+                sb.cdp.scroll_into_view('div[id*="recaptcha"]')
+                sb.cdp.sleep(1)
+                
+                # Get screen dimensions for bounds checking
+                screen_rect = sb.cdp.get_screen_rect()
+                window_rect = sb.cdp.get_window_rect()
+                print(f"[DEBUG] Screen: {screen_rect}, Window: {window_rect}")
+                
                 # Physical coordinate-based clicking with mouse pointer
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
                 
-                # Add slight randomization to appear more human-like
-                import random
                 x = rect['x'] + 20
                 y = rect['y'] + 35
+                
+                # Check if coordinates are within screen bounds
+                max_x = min(screen_rect['width'], window_rect['width']) - 10
+                max_y = min(screen_rect['height'], window_rect['height']) - 10
+                
+                # Adjust coordinates if they're outside bounds
+                if x > max_x:
+                    x = max_x
+                if y > max_y:
+                    y = max_y
+                if x < 10:
+                    x = 10
+                if y < 10:
+                    y = 10
 
-                print(f"[CLICK] Physical click at coordinates: x={x}, y={y}")
+                print(f"[CLICK] Adjusted coordinates (within bounds): x={x}, y={y}")
                 
                 # Move cursor and wait (physical mouse movement)
                 sb.cdp.gui_hover_x_y(x, y)
