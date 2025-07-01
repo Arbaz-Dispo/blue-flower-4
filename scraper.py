@@ -198,23 +198,27 @@ def scrape_business_info(control_number):
             print(f"[SCREENSHOT] Before screenshot saved: {screenshot_before} (elapsed: {elapsed_time:.1f}s)")
             
             try:
+                # Physical coordinate-based clicking with mouse pointer
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
+                
+                # Add slight randomization to appear more human-like
+                import random
                 x = rect['x'] + 20
                 y = rect['y'] + 35
 
-                print(f"[CLICK] Moving cursor to coordinates: x={x}, y={y}")
+                print(f"[CLICK] Physical click at coordinates: x={x}, y={y}")
                 
-                # First, move cursor to the target location (this will trigger visual cursor movement)
+                # Move cursor and wait (physical mouse movement)
                 sb.cdp.gui_hover_x_y(x, y)
-                print(f"[CURSOR] Moved to captcha div, waiting 2 seconds...")
-                
-                # Wait 2 seconds to allow visual cursor to be visible and stable
+                print(f"[CURSOR] Physically moved to captcha, waiting 2 seconds...")
                 sb.cdp.sleep(2)
                 
-                print(f"[CLICK] Now clicking at coordinates: x={x}, y={y}")
-                # Perform the click (cursor system will automatically handle visual feedback)
+                # Perform physical double-click at coordinates
+                print(f"[CLICK] Performing physical double-click...")
                 sb.cdp.gui_click_x_y(x, y)
-                sb.cdp.sleep(2)  # Allow time for click effects to show
+                sb.cdp.sleep(0.3)
+                sb.cdp.gui_click_x_y(x, y)  # Double click
+                sb.cdp.sleep(2)
                 
                 # Take screenshot with cursor and click markers visible
                 sb.cdp.save_screenshot(screenshot_after)
