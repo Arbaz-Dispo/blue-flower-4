@@ -199,8 +199,8 @@ def scrape_business_info(control_number):
             
             try:
                 rect = sb.cdp.get_gui_element_rect('div[id*="recaptcha"]')
-                x = rect['x'] + 30
-                y = rect['y'] + 25
+                x = rect['x'] + 20
+                y = rect['y'] + 35
 
                 print(f"[CLICK] Moving cursor to coordinates: x={x}, y={y}")
                 
