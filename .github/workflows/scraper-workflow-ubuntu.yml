@@ -1,0 +1,122 @@
+name: Tennessee Business Scraper (Ubuntu)
+
+on:
+  workflow_dispatch:
+    inputs:
+      control_number:
+        description: 'Control number to scrape'
+        required: true
+        default: '000876070'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          wget \
+          curl \
+          unzip \
+          xvfb \
+          x11-utils \
+          xfonts-100dpi \
+          xfonts-75dpi \
+          xfonts-scalable \
+          xfonts-cyrillic \
+          libnss3-dev \
+          libxss1 \
+          libasound2 \
+          libxtst6 \
+          libgtk-3-0 \
+          libdrm2 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxrandr2 \
+          libgbm1 \
+          libxkbcommon0 \
+          libatspi2.0-0
+    
+    - name: Install Chrome
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create logs directory
+      run: mkdir -p logs
+    
+    - name: Run scraper with virtual display
+      run: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
+        sleep 3
+        python scraper.py "${{ github.event.inputs.control_number }}"
+      env:
+        PYTHONUNBUFFERED: 1
+    
+    - name: List generated files
+      run: |
+        echo "=== Generated Files ==="
+        ls -la *.json 2>/dev/null || echo "No JSON files found"
+        echo "=== Log Files ==="
+        ls -la logs/ 2>/dev/null || echo "No log files found"
+        echo "=== Screenshot Files ==="
+        find logs/ -name "*.png" 2>/dev/null || echo "No screenshots found"
+    
+    - name: Upload business data artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: business-info-ubuntu
+        path: |
+          *.json
+        retention-days: 30
+    
+    - name: Upload logs and screenshots artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: scraper-logs-ubuntu
+        path: |
+          logs/
+        retention-days: 30
+    
+    - name: Display scraping summary
+      if: always()
+      run: |
+        echo "=== SCRAPING SUMMARY ==="
+        echo "Control Number: ${{ github.event.inputs.control_number }}"
+        echo "Runner: ubuntu-latest"
+        echo "Timestamp: $(date)"
+        
+        if [ -f "business_info_${{ github.event.inputs.control_number }}.json" ]; then
+          echo "Status: SUCCESS - Business data extracted"
+          echo "File size: $(stat -c%s business_info_${{ github.event.inputs.control_number }}.json) bytes"
+        else
+          echo "Status: FAILED - No business data file found"
+        fi
+        
+        screenshot_count=$(find logs/ -name "*.png" 2>/dev/null | wc -l)
+        echo "Screenshots captured: $screenshot_count"
+        
+        if [ $screenshot_count -gt 0 ]; then
+          echo "Screenshot files:"
+          find logs/ -name "*.png" -printf "  %f (%s bytes)\n" 2>/dev/null
+        fi 
