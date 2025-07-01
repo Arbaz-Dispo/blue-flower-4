@@ -30,7 +30,7 @@ jobs:
       run: uv pip install -r requirements.txt --system
 
     - name: Run scraper
-      run: python tennessee_scraper.py ${{ github.event.inputs.control_number }}
+      run: python scraper.py ${{ github.event.inputs.control_number }}
 
     - name: Upload business info artifact
       uses: actions/upload-artifact@v4
